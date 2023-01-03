@@ -78,14 +78,9 @@ class MMLoss(nn.Module):
         neg_k = torch.max(simi_a,dim=0)[0].clamp(max=1-1e-5,min=-1+1e-5)
         simi_p = simi_p - 10*(simi_p>0.9)  - 10*save_mask_neg
         neg_j = torch.max(simi_p,dim=0)[0].clamp(max=1-1e-5,min=-1+1e-5)
-        # M = ((torch.pi/2-neg_k.acos()).clamp(min=0).pow(2)/4+(torch.pi/2-neg_j.acos()).clamp(min=0).pow(2)/4+(torch.pi/2-neg_m.acos()).clamp(min=0).pow(2)/4+(torch.pi/2-neg_n.acos()).clamp(min=0).pow(2)/4+\
-        #     pos.acos().pow(2)).pow(2)
         neg_cross = torch.max(neg_n,neg_m)
-        # M = ((torch.pi/2-neg_k.acos()).clamp(min=0).pow(2)/3+(torch.pi/2-neg_j.acos()).clamp(min=0).pow(2)/4+(torch.pi/2-neg_m.acos()).clamp(min=0).pow(2)/4+(torch.pi/2-neg_n.acos()).clamp(min=0).pow(2)/4+\
-        #     pos.acos().pow(2)).pow(2)
         M = ((torch.pi-neg_k.acos()).pow(2)/3+(torch.pi-neg_j.acos()).pow(2)/3+(torch.pi-neg_cross.acos()).pow(2)/3+\
             pos.acos().pow(2)).pow(2)
-        #M = (torch.pi*3-neg_k.acos()-neg_j.acos()-neg_cross.acos()+pos.acos()*3).pow(2)
         return M
     
     def loss_desc(self):
@@ -120,9 +115,6 @@ class MMLoss(nn.Module):
         return loss_rep
     
     def compute_edge(self,im):
-        #im = KF.gaussian_blur2d(im,kernel_size=(3,3),sigma=(1,1))
-        # im = (im+4).clamp(min=0)
-        # im = im/self.AP(im)
         edge = KF.spatial_gradient(im,order=2).abs().sum(dim=[1,2])
         edge = self.AP3(self.MP7(edge.unsqueeze(1))).detach()
         edge_min = edge.min(dim=-1,keepdim=True)[0]
@@ -135,37 +127,20 @@ class MMLoss(nn.Module):
     def loss_peak(self):
         priori1 = self.compute_edge(self.im1)
         mask1 = 1-priori1/(priori1.mean()+1e-12)
-        mask1_neg = self.AP((mask1<0).float())>0
         #mask_pos = mask
         mask1 = F.relu(mask1)
         priori2 = self.compute_edge(self.im2)
         mask2 = 1-priori2/(priori2.mean()+1e-12)
-        mask2_neg = self.AP((mask2<0).float())>0
         mask2 = F.relu(mask2)
         score1 = self.score1*self.border_mask
         score2 = self.score2*self.border_mask
         score1_ = KF.gaussian_blur2d(score1,kernel_size=(3,3),sigma=(1,1))
         score2_ = KF.gaussian_blur2d(score2,kernel_size=(3,3),sigma=(1,1))
         loss_peak_edge = (mask1*score1.pow(2)).mean()/self.mask1_mean + (mask2*score2.pow(2)).mean()/self.mask2_mean
-        # loss_peak_random = score1.pow(2).mean() + (1-self.MP(score1)).pow(2).mean() +\
-        #                    score2.pow(2).mean() + (1-self.MP(score2)).pow(2).mean()
-        # loss_peak_random = self.AP(score1).pow(2).mean() + (1-self.MP(score1_)).pow(2).mean() + (self.AP3(score1).pow(2)+(1-self.MP3(score1_)).pow(2)).mean()+\
-        #                    self.AP(score2).pow(2).mean() + (1-self.MP(score2_)).pow(2).mean() + (self.AP3(score2).pow(2)+(1-self.MP3(score2_)).pow(2)).mean()
+
         loss_peak_random = self.AP(score1_).pow(2).mean() + (1-self.MP(score1_)).pow(2).mean() + (self.AP3(score1_)+1-self.MP3(score1_)).pow(2).mean()+\
                            self.AP(score2_).pow(2).mean() + (1-self.MP(score2_)).pow(2).mean() + (self.AP3(score2_)+1-self.MP3(score2_)).pow(2).mean()
-        # loss_peak_random = (score1 + 1-self.MP(score1_)).pow(2).mean() + score1.pow(2).mean()+(1-self.MP3(score1_)).pow(2).mean()+\
-        #                    (score2 + 1-self.MP(score2_)).pow(2).mean() + score1.pow(2).mean()+(1-self.MP3(score1_)).pow(2).mean()
-        # loss_peak_random = score1.mean() + (1-self.MP(score1_)).mean()/2 + (1-self.AP3(score1_)).mean()/2+\
-        #                    score2.mean() + (1-self.MP(score2_)).mean()/2 + (1-self.AP3(score2_)).mean()/2
-        #loss_peak_random = score1.pow(2).mean()+(1-self.MP(score1_)).pow(2).mean()+score2.pow(2).mean()+(1-self.MP(score2_)).pow(2).mean()
-        
-        # loss_peak_random = score2.mean() + (1-self.MP(score2_)).mean()/2 + \
-        #                     score1.mean() + (1-self.MP(score1_)).mean()/2+ \
-        #                     (1-self.MP3(score1_)).mean()/2+(1-self.MP3(score2_)).mean()/2
-        # loss_peak_random = (score1+1-self.MP(score1_)).mean().pow(2)/4+(score1+1-self.MP3(score1_)).pow(2).mean()/4 + \
-        #                    (score2+1-self.MP(score2_)).mean().pow(2)/4+(score2+1-self.MP3(score2_)).pow(2).mean()/4
-        
-        # loss_kill_boarder = (score1*(1-self.border_mask)).pow(2).mean()+(score2*(1-self.border_mask)).pow(2).mean()
+
         loss_peak_coupled = 0
         for i in range(self.score1.shape[0]):
             # if number of samples is too samll or scores are all zeros, randomly generate a new mask
@@ -214,32 +189,7 @@ class MMLoss(nn.Module):
         t = flow12
         for i in range(n):
             good_mask = self.AP3(good_mask.float())>0.5
-        # if good_mask.float().sum()<100:
-        #     for i in range(good_mask.shape[0]):
-        #         good_mask_i = good_mask[i]
-        #         valid_points = good_mask_i>0.1
-        #         if valid_points.float().sum()<100:
-        #             im = TF.to_pil_image(self.im2[i].squeeze(0))
-        #             im.save('error.png')
         return good_mask
         
-# if __name__ == '__main__':
-#     feat1 = torch.randn([2,128,192,192]).cuda()
-#     feat2 = feat1 + torch.randn([2,128,192,192]).cuda()*0.3
-#     feat1 = F.avg_pool2d(feat1,kernel_size=3,padding=1,stride=1)
-#     feat2 = F.avg_pool2d(feat2,kernel_size=3,padding=1,stride=1)
-#     feat1 = F.normalize(feat1,dim=1)
-#     feat2 = F.normalize(feat2,dim=1)
-#     from utils import *
-#     score1 = torch.rand([2,1,192,192])
-#     score2 = torch.rand([2,1,192,192])
-#     #score2 = score2/score2.max()
-#     score1 = score1.cuda()
-#     score2 = score2.cuda()
-#     aflow = KU.create_meshgrid(192,192,normalized_coordinates=False).cuda()
-#     aflow = torch.cat([aflow,aflow])
-#     #feat1,feat2,aflow = Random_proj(feat1,feat1) 
-#     loss = MMLoss()
-#     l = loss(feat1,score1,feat1,score2,aflow)
-    
+
     
