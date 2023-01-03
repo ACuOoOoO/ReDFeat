@@ -26,8 +26,11 @@ python train.py --image_type=VIS_IR --name=IR
 ```
 
 The major parameters include:
+
 **image_type**: type of modal (VIS_NIR,VIS_IR,VIS_SAR)
+
 **name**: name of checkpoint
+
 **datapath**: path for training data
 
 ## Evaluation
@@ -35,5 +38,7 @@ The major parameters include:
 Evaluation codes for feature extraction, matching and transform estimation are included in [mutilmodal_feature_evaluation benchmark](https://github.com/ACuOoOoO/Multimodal_Feature_Evaluation):
 
 **extract_ReDFeat.py**: extract ReDFeat for three types of modals.
+
 **match.py**: reproduce feature matching experiments in the paper.
+
 **reproj.py**: reproduce image registration experiments in the paper.
