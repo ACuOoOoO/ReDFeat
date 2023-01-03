@@ -155,10 +155,10 @@ def train(args):
     )
     
     # Create the checkpoint 7directory
-    if os.path.isdir(args.checkpoint_directory):
+    if os.path.isdir(args.name):
         print('[Warning] Checkpoint directory already exists.')
     else:
-        os.mkdir(args.checkpoint_directory)
+        os.mkdir(args.name)
         
     # Open the log file for writing
     if os.path.exists(args.log_file):
@@ -180,7 +180,7 @@ def train(args):
         
         # Save the current checkpoint
         checkpoint_path = os.path.join(
-            args.checkpoint_directory,
+            args.name,
             '%02d.pth' % (epoch_idx)
         )
         checkpoint = {
@@ -230,33 +230,33 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--checkpoint_directory', type=str, default='ReDFeat_SAR',
+        '--name', type=str, default='ReDFeat_SAR',
         help='directory for training checkpoints'
     )
     
 
     parser.add_argument(
         '--image_type', type=str, default='VIS_NIR',
-        help='type of training images, optical_sar for optical and SAR images, vis_inf for visible and infrared images'
+        help='type of training images VIS_IR, VIS_NIR, VIS_SAR'
     )
 
     parser.add_argument(
         '--datapath', type=str, default='Multimodal_Feature_Evaluation-main',
-        help='type of training images, optical_sar for optical and SAR images, vis_inf for visible and infrared images'
+        help='root for training data'
     )
 
     parser.add_argument(
         '--gpu', type=int, default=0,
-        help='type of training images, optical_sar for optical and SAR images, vis_inf for visible and infrared images'
+        help='gpu id'
     )
 
     parser.add_argument(
         '--lam1', type=float, default=1.0,
-        help='weight for repeatablity loss'
+        help='weight for peaking loss'
     )
     parser.add_argument(
         '--lam2', type=float, default=8.0,
-        help='weight for peaking loss'
+        help='weight for repeatability loss'
     )
     args = parser.parse_args()
     print(args)
