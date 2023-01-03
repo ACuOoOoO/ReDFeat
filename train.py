@@ -252,11 +252,11 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--lam1', type=float, default=1.0,
-        help='type of training images, optical_sar for optical and SAR images, vis_inf for visible and infrared images'
+        help='weight for repeatablity loss'
     )
     parser.add_argument(
         '--lam2', type=float, default=8.0,
-        help='type of training images, optical_sar for optical and SAR images, vis_inf for visible and infrared images'
+        help='weight for peaking loss'
     )
     args = parser.parse_args()
     print(args)
